@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using UrlShort.Models;
 using Microsoft.AspNetCore.Http;
+using System.Security.Cryptography;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,7 +39,8 @@ app.MapPost("/shorturl", async (UrlDto url, ApiDbContext db, HttpContext ctx) =>
     var sUrl = new ShortUrl()
     {
         OriginalUrl = url.Url,
-        ShortenUrl = randomStr 
+        ShortenUrl = randomStr,
+        ExpiryDate = DateTime.UtcNow.AddSeconds(30)
     };
 
     db.Urls.Add(sUrl);
@@ -46,7 +48,12 @@ app.MapPost("/shorturl", async (UrlDto url, ApiDbContext db, HttpContext ctx) =>
 
     var result = $"{ctx.Request.Scheme}://{ctx.Request.Host}/{sUrl.ShortenUrl}";
     
-    
+    var existingUrl = await db.Urls.FirstOrDefaultAsync(x => x.OriginalUrl == url.Url);
+    if (existingUrl != null)
+    {
+        var existingResult = $"{ctx.Request.Scheme}://{ctx.Request.Host}/{existingUrl.ShortenUrl}";
+        return Results.Ok(new UrlShortResponsDto() { Url = existingResult });
+    }
     
     
     return Results.Ok(new UrlShortResponsDto()
@@ -60,11 +67,12 @@ app.MapFallback(async (ApiDbContext db, HttpContext ctx) =>
     var path = ctx.Request.Path.ToUriComponent().Trim('/');
     var urlMatch = await db.Urls.FirstOrDefaultAsync(x => x.ShortenUrl.Trim()==path.Trim());
 
-
-    if (urlMatch == null)
+    if (urlMatch == null || urlMatch.ExpiryDate < DateTime.UtcNow)
     {
-        return Results.BadRequest("invalid short url");
+        return Results.BadRequest("Invalid or expired short URL");
     }
+    
+    
 
     return Results.Redirect(urlMatch.OriginalUrl);
 });
