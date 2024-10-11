@@ -25,6 +25,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+
+
 app.MapPost("/shorturl", async (UrlDto url, ApiDbContext db, HttpContext ctx) =>
 {
     // Validating the input URL
@@ -33,11 +35,11 @@ app.MapPost("/shorturl", async (UrlDto url, ApiDbContext db, HttpContext ctx) =>
 
     // Creating a short version of the provided URL
     // var random = new Random();
-   // const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890@az";
+   // const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890@abcdefghijklmnopqrstuvwxyz";
    // var randomStr = new string(Enumerable.Repeat(chars, 8)
     //    .Select(x => x[random.Next(x.Length)]).ToArray());
     var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(url.Url + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")));
-    var shortLink = Convert.ToBase64String(hashBytes).Substring(0, 8); // Taking first 8 characters
+    var shortLink = Convert.ToBase64String(hashBytes).Substring(0, 8); // 8 char
 
     
     
