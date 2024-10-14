@@ -5,9 +5,7 @@ using Microsoft.AspNetCore.Http;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
-
-
-
+using StackExchange.Redis;
 using UrlShort.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,8 +27,21 @@ builder.Services.AddSwaggerGen();
 
 
 
+//PostgresSql
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApiDbContext>(options => options.UseNpgsql(connStr));
+
+//Redis
+// builder.Services.AddSingleton<IConnectionMultiplexer>(
+//     ConnectionMultiplexer.Connect(
+//         builder.Configuration.GetValue<string>("Redis:ConnectionString"))
+//     );
+var redisConnectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString");
+
+var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+redisOptions.AbortOnConnectFail = false;
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisOptions));
 
 var app = builder.Build();
 
