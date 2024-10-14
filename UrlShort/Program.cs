@@ -28,8 +28,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
+
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApiDbContext>(options => options.UseSqlite(connStr));
+builder.Services.AddDbContext<ApiDbContext>(options => options.UseNpgsql(connStr));
 
 var app = builder.Build();
 
