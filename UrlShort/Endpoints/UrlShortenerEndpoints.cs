@@ -24,6 +24,27 @@ public static class UrlShortenerEndpoints
 
     private static async Task<IResult> CreateShortUrl(UrlDto url, ApiDbContext db, HttpContext ctx,IConnectionMultiplexer redis)
     {
+        var redisDb = redis.GetDatabase();
+        var existingUrl = await redisDb.StringGetAsync(url.Url);
+          
+        var ClientIp = ctx.Connection.RemoteIpAddress?.ToString() ?? "unkown_ip";
+        var userKey = $"ip:{ClientIp}:linkcount";
+        var currentCount = await redisDb.StringIncrementAsync(userKey);
+        
+      
+        //Rate limit 100
+        if (currentCount == 1)
+        {
+            await redisDb.KeyExpireAsync(userKey, TimeSpan.FromMinutes(1)); // Set 1-minute expiry
+        }
+
+        if (currentCount > 100)
+        {
+            _logger.LogWarning("Rate limit exceeded:", currentCount);
+            return Results.BadRequest("Rate limit exceeded: Max 100 links per minute.");
+        }
+        
+        
         _logger.LogInformation("Attempting to short Url for:",url.Url);
         // Validating the input URL
         if (!Uri.TryCreate(url.Url, UriKind.Absolute, out var inputUrl))
@@ -37,9 +58,7 @@ public static class UrlShortenerEndpoints
             SHA256.HashData(Encoding.UTF8.GetBytes(url.Url + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")));
         var shortLink = Convert.ToBase64String(hashBytes).Substring(0, 8); // 8 char
 
-        var redisDb = redis.GetDatabase();
-        var existingUrl = await redisDb.StringGetAsync(url.Url);
-
+        
         if (!existingUrl.IsNullOrEmpty)
         {
             _logger.LogInformation("Existing short Url found in Redis for, ",url.Url);
