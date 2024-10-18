@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using UrlShort.Endpoints;
 
-//var builder = WebApplication.CreateBuilder(args);
 var builder = WebApplication.CreateBuilder(args);
+
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenLocalhost(7158, listenOptions =>
@@ -17,7 +17,7 @@ builder.WebHost.ConfigureKestrel(options =>
         listenOptions.UseHttps();
     });
 });
-//
+
 // builder.WebHost.ConfigureKestrel(serverOptions =>
 // {
 //     serverOptions.ListenAnyIP(443, listenOptions =>
@@ -59,7 +59,7 @@ redisOptions.AbortOnConnectFail = false;
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisOptions));
 
-//builder.WebHost.UseUrls("http://*:80");
+builder.WebHost.UseUrls("http://*:80");
 
 var app = builder.Build();
 
@@ -69,7 +69,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.MapShortenerEndPoints();
 
