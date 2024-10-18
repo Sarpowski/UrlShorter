@@ -3,9 +3,9 @@ using UrlShort.Models;
 using System.Security.Cryptography;
 using System.Text;
 using StackExchange.Redis;
-using Microsoft.AspNetCore.Http;
 
 namespace UrlShort.Endpoints;
+
 
 public static class UrlShortenerEndpoints
 {
@@ -40,14 +40,14 @@ public static class UrlShortenerEndpoints
             if (currentCount > 100)
             {
                 _logger.LogWarning("Rate limit exceeded: {Count}", currentCount);
-                return Results.BadRequest("Rate limit exceeded: Max 100 links per minute.");
+                return Results.BadRequest("limit rate exceeded  Max 100 links per minute.");
             }
 
             // Distributed locking
             if (!await AcquireLock(redisDb, lockKey, lockExpiry))
             {
-                _logger.LogWarning("Failed to acquire lock. Max concurrent links limit reached.");
-                return Results.StatusCode(429); // Too Many Requests
+                _logger.LogWarning("Failed to get lock. Max concurrent links limit reached.");
+                return Results.StatusCode(429); // Too many Requests
             }
 
             _logger.LogInformation("Attempting to short Url for: {Url}", url.Url);
@@ -59,12 +59,14 @@ public static class UrlShortenerEndpoints
                 return Results.BadRequest("Invalid URL has been provided");
             }
 
-            // Check if exists in Redis
             var existingUrl = await redisDb.StringGetAsync(url.Url);
             if (!existingUrl.IsNullOrEmpty)
             {
                 _logger.LogInformation("Existing short Url found in Redis for: {Url}", url.Url);
-                return Results.Ok(new UrlShortResponsDto { Url = existingUrl });
+                return Results.Ok(new UrlShortResponsDto
+                {
+                    Url = existingUrl
+                });
             }
 
             
@@ -74,7 +76,7 @@ public static class UrlShortenerEndpoints
             {
                 OriginalUrl = url.Url,
                 ShortenUrl = shortLink,
-                ExpiryDate = DateTime.UtcNow.AddDays(15)
+                ExpiryDate = DateTime.UtcNow.AddMinutes(1)
             };
 
             db.Urls.Add(sUrl);
@@ -84,11 +86,13 @@ public static class UrlShortenerEndpoints
             await redisDb.StringSetAsync(url.Url, result, TimeSpan.FromDays(15));
 
             _logger.LogInformation("Created a new short URL for: {Url}", url.Url);
-            return Results.Ok(new UrlShortResponsDto { Url = result });
+            return Results.Ok(new UrlShortResponsDto
+            {
+                Url = result
+            });
         }
         finally
         {
-            // Release the lock
             await redisDb.LockReleaseAsync(ConcurrencyLockKey, lockKey);
         }
     }

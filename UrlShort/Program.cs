@@ -47,11 +47,7 @@ builder.Services.AddSwaggerGen();
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApiDbContext>(options => options.UseNpgsql(connStr));
 
-//Redis
-// builder.Services.AddSingleton<IConnectionMultiplexer>(
-//     ConnectionMultiplexer.Connect(
-//         builder.Configuration.GetValue<string>("Redis:ConnectionString"))
-//     );
+
 var redisConnectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString");
 
 var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
